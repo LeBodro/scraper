@@ -1,5 +1,4 @@
 from lxml import html
-import requests
 from requests_futures.sessions import FuturesSession
 from bs4 import BeautifulSoup
 import re
