@@ -28,19 +28,16 @@ def fetch_pages(base_url, home_url, page_url_format, begin, end):
     raw_html_content = []
 
     for page_number in range(begin, end + 1):
-        home = requests.get(base_url + home_url)  # range begin to end is inclusive
-        tree = html.fromstring(home.content)
+        home = session.get(base_url + home_url)  # range begin to end is inclusive
+        tree = html.fromstring(home.result().content)
         page = tree.xpath(page_url_format % str(page_number))[0]  # use %d in page_url_format
         url = (base_url + page).split('#')[0]
         if url not in opened_urls:
             opened_urls.append(url)
-            async_requests.append({
-                'request': session.get(url),
-                'url': url
-            })
+            async_requests.append(session.get(url))
 
     for request in async_requests:
-        raw_html_content.append(request['request'].result().content)
+        raw_html_content.append(request.result().content)
 
     return raw_html_content
 
