@@ -51,13 +51,19 @@ def fetch_and_save_raw_angels():
     db.raw_angels.insert_many(raw_angels)
 
 
-def parse(raw_pages):
-    for stuff in raw_pages:
-        soup = BeautifulSoup(stuff.content, 'lxml')
-        text = soup.body.get_text()
-
-        # spell_titles = soup.find_all("p", class_="stat-block-title")
-        # spell_resistance = True if SPELL_RESISTANCE_REGEX.search(text) is not None else False
-
-        # for i in range(len(spell_titles)):
-        #     print("parse it")
+def parse_angels():
+    db.angels.delete_many({})
+    raw_pages = db.raw_angels.find()
+    angels = []
+    for raw_page in raw_pages:
+        soup = BeautifulSoup(raw_page['content'], 'lxml')
+        name = soup.find("h1").text
+        spells = []
+        raw_spells = soup.find_all("a", class_="spell")
+        for raw_spell in raw_spells:
+            spells.append(raw_spell.text)
+        angels.append({
+            'name': name,
+            'spells': spells
+        })
+    db.angels.insert_many(angels)
