@@ -1,4 +1,5 @@
 from lxml import html
+from pymongo import MongoClient
 from requests_futures.sessions import FuturesSession
 from bs4 import BeautifulSoup
 import re
@@ -20,6 +21,10 @@ LEVEL_REGEX = re.compile('wizard [0-9]')
 TITLE_CLASS_REGEX = re.compile('stat-block-title')
 
 
+client = MongoClient()
+db = client.db
+
+
 def fetch_pages(base_url, home_url, page_url_format, begin, end):
     session = FuturesSession()
     async_requests = []
@@ -29,26 +34,26 @@ def fetch_pages(base_url, home_url, page_url_format, begin, end):
     for page_number in range(begin, end + 1):
         home = session.get(base_url + home_url)  # range begin to end is inclusive
         tree = html.fromstring(home.result().content)
-        page = tree.xpath(page_url_format % str(page_number))[0]  # use %d in page_url_format
-        url = (base_url + page).split('#')[0]
-        if url not in opened_urls:
-            opened_urls.append(url)
-            async_requests.append(session.get(url))
+        page_url = tree.xpath(page_url_format % page_number)[0].attrib['href']  # use %d in page_url_format
+        if page_url not in opened_urls:
+            opened_urls.append(page_url)
+            async_requests.append(session.get(page_url))
 
     for request in async_requests:
-        raw_html_content.append(request.result().content)
+        raw_html_content.append({'content': request.result().content})
 
     return raw_html_content
 
 
-all_spells = []
+def fetch_and_save_raw_angels():
+    db.raw_angels.delete_many({})
+    raw_angels = fetch_pages(BASE_URL, HOME_URL, XPATH_FORMAT, FIRST_PAGE, LAST_PAGE)
+    db.raw_angels.insert_many(raw_angels)
 
-raw_stuff = fetch_pages(BASE_URL, HOME_URL, XPATH_FORMAT, FIRST_PAGE, LAST_PAGE)
 
-
-def parse():
-    for stuff in raw_stuff:
-        soup = BeautifulSoup(stuff, 'lxml')
+def parse(raw_pages):
+    for stuff in raw_pages:
+        soup = BeautifulSoup(stuff.content, 'lxml')
         text = soup.body.get_text()
 
         # spell_titles = soup.find_all("p", class_="stat-block-title")
