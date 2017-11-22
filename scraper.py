@@ -3,6 +3,7 @@ from pymongo import MongoClient
 from requests_futures.sessions import FuturesSession
 from bs4 import BeautifulSoup
 import re
+import json
 
 
 # Base urls
@@ -51,7 +52,7 @@ def fetch_and_save_raw_angels():
     db.raw_angels.insert_many(raw_angels)
 
 
-def parse_angels():
+def parse_angels(to_json):
     db.angels.delete_many({})
     raw_pages = db.raw_angels.find()
     angels = []
@@ -66,4 +67,8 @@ def parse_angels():
             'name': name,
             'spells': spells
         })
-    db.angels.insert_many(angels)
+    if to_json is True:
+        with open('angels.json', 'w') as outfile:
+            json.dump(angels, outfile)
+    else:
+        db.angels.insert_many(angels)
